@@ -24,34 +24,52 @@ export default function OthelloPage() {
     }));
     setCounts({ black: b, white: w });
 
-    // 置ける場所があるかチェック
     const blackCanMove = checkAnywhereCanPlace(board, 1);
     const whiteCanMove = checkAnywhereCanPlace(board, 2);
 
     if (b + w === 64 || b === 0 || w === 0 || (!blackCanMove && !whiteCanMove)) {
       setGameOver(true);
     } else if (!isBlackTurn && !whiteCanMove) {
-      setIsBlackTurn(true); // 白が置けないならパス
+      setIsBlackTurn(true); 
     } else if (isBlackTurn && !blackCanMove) {
-      setIsBlackTurn(false); // 黒が置けないならパス
+      setIsBlackTurn(false);
     }
   }, [board, isBlackTurn]);
 
-  // CPUの動作（ソロモードかつ白の番のとき）
+  // 【強化版】AIの動作ロジック
   useEffect(() => {
     if (gameMode === 'solo' && !isBlackTurn && !gameOver) {
       const timer = setTimeout(() => {
-        const candidates: {y: number, x: number}[] = [];
+        const candidates: {y: number, x: number, score: number}[] = [];
+        
         board.forEach((row, y) => row.forEach((_, x) => {
-          if (checkCanPlace(board, y, x, 2)) candidates.push({y, x});
+          if (checkCanPlace(board, y, x, 2)) {
+            let score = 0;
+            // セオリー1: 四隅(0,0), (0,7), (7,0), (7,7) は非常に価値が高い
+            if ((y === 0 || y === 7) && (x === 0 || x === 7)) {
+              score = 100;
+            } 
+            // セオリー2: 端(辺)も少し価値が高い
+            else if (y === 0 || y === 7 || x === 0 || x === 7) {
+              score = 10;
+            }
+            // セオリー3: 角の隣(X打ち)などは本当はマイナス評価だが、今回はシンプルに加点方式
+            else {
+              score = 1;
+            }
+            candidates.push({y, x, score});
+          }
         }));
 
         if (candidates.length > 0) {
-          // ランダムに選ぶ（レベル1 AI）
-          const choice = candidates[Math.floor(Math.random() * candidates.length)];
+          // 最もスコアが高い手の中から選ぶ
+          candidates.sort((a, b) => b.score - a.score);
+          const topScore = candidates[0].score;
+          const bestMoves = candidates.filter(c => c.score === topScore);
+          const choice = bestMoves[Math.floor(Math.random() * bestMoves.length)];
           placeStone(choice.y, choice.x);
         }
-      }, 800); // 0.8秒待ってから打つ（人間味を出すため）
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [isBlackTurn, gameMode, gameOver]);
@@ -103,10 +121,11 @@ export default function OthelloPage() {
   if (gameMode === 'select') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-900 text-white">
-        <h1 className="mb-12 text-5xl font-black tracking-tighter">OTHELLO PRO</h1>
+        <h1 className="mb-2 text-5xl font-black tracking-tighter text-emerald-500">オセロ pro</h1>
+        <p className="mb-12 text-slate-400 text-sm italic">made by shinnosuke mitsuda</p>
         <div className="flex flex-col gap-4 w-64">
           <button onClick={() => setGameMode('solo')} className="bg-emerald-600 hover:bg-emerald-500 py-4 rounded-xl font-bold shadow-lg transition-transform active:scale-95">
-            一人で遊ぶ (CPU対戦)
+            一人で遊ぶ (VS AI)
           </button>
           <button onClick={() => setGameMode('pvp')} className="bg-slate-700 hover:bg-slate-600 py-4 rounded-xl font-bold shadow-lg transition-transform active:scale-95">
             二人で遊ぶ (対面対戦)
@@ -120,11 +139,13 @@ export default function OthelloPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-slate-900 p-4 font-sans text-slate-100">
       <div className="mb-6 flex items-center justify-between w-full max-w-md">
         <button onClick={() => setGameMode('select')} className="text-xs bg-slate-800 px-3 py-1 rounded hover:bg-slate-700">← 戻る</button>
-        <h1 className="text-2xl font-black tracking-tighter">OTHELLO PRO</h1>
-        <div className="text-xs text-emerald-400">{gameMode === 'solo' ? 'VS CPU' : '2 PLAYERS'}</div>
+        <div className="flex flex-col items-center">
+          <h1 className="text-2xl font-black tracking-tighter">オセロ pro</h1>
+          <span className="text-[10px] text-slate-500">made by shinnosuke mitsuda</span>
+        </div>
+        <div className="text-xs text-emerald-400">{gameMode === 'solo' ? 'VS AI' : '2 PLAYERS'}</div>
       </div>
       
-      {/* スコアボード */}
       <div className="mb-6 flex gap-8">
         <div className={`flex flex-col items-center p-4 rounded-xl border min-w-[100px] transition-all ${isBlackTurn ? 'bg-black border-white ring-2 ring-emerald-500' : 'bg-black/50 border-slate-700'}`}>
           <span className="text-xs text-slate-400 font-bold">BLACK</span>
@@ -155,7 +176,7 @@ export default function OthelloPage() {
 
         {gameOver && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 backdrop-blur-sm rounded">
-            <h2 className="text-3xl font-bold mb-4 text-white uppercase tracking-widest">
+            <h2 className="text-3xl font-bold mb-4 text-white uppercase tracking-widest text-center px-4">
               {counts.black > counts.white ? "Black Wins!" : counts.black < counts.white ? "White Wins!" : "Draw!"}
             </h2>
             <div className="flex gap-4">
