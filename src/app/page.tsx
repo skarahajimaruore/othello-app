@@ -11,6 +11,7 @@ export default function OthelloPage() {
   const [isBlackTurn, setIsBlackTurn] = useState(true);
   const [counts, setCounts] = useState({ black: 2, white: 2 });
   const [gameOver, setGameOver] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
   const [gameMode, setGameMode] = useState<'select' | 'solo' | 'pvp'>('select');
 
   const directions = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
@@ -35,6 +36,14 @@ export default function OthelloPage() {
       setIsBlackTurn(false);
     }
   }, [board, isBlackTurn]);
+
+  useEffect(() => {
+    if (gameOver) {
+      setShowResultModal(true);
+    } else {
+      setShowResultModal(false);
+    }
+  }, [gameOver]);
 
   // 【強化版】AIの動作ロジック
   useEffect(() => {
@@ -174,22 +183,39 @@ export default function OthelloPage() {
           }))}
         </div>
 
-        {gameOver && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/90 backdrop-blur-sm rounded">
-            <h2 className="text-3xl font-bold mb-4 text-white uppercase tracking-widest text-center px-4">
+      </div>
+
+      {gameOver && (
+        <button
+          onClick={() => {
+            setBoard(initialBoard);
+            setGameOver(false);
+            setIsBlackTurn(true);
+          }}
+          className="mt-6 bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-2 rounded-full font-bold shadow-lg transition-transform active:scale-95"
+        >
+          最初からやり直す
+        </button>
+      )}
+
+      {showResultModal && (
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl px-8 py-6 shadow-2xl max-w-sm w-[90%] text-center">
+            <h2 className="text-2xl font-bold mb-3 text-white tracking-wide">
               {counts.black > counts.white ? "Black Wins!" : counts.black < counts.white ? "White Wins!" : "Draw!"}
             </h2>
-            <div className="flex gap-4">
-              <button onClick={() => {setBoard(initialBoard); setGameOver(false); setIsBlackTurn(true);}} className="bg-emerald-500 hover:bg-emerald-400 text-white px-6 py-2 rounded-full font-bold shadow-lg">
-                Rematch
-              </button>
-              <button onClick={() => setGameMode('select')} className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-full font-bold shadow-lg">
-                Menu
-              </button>
-            </div>
+            <p className="mb-6 text-sm text-slate-300">
+              対局が終了しました。モーダルを閉じると、最後の一手を含めた盤面全体を確認できます。
+            </p>
+            <button
+              onClick={() => setShowResultModal(false)}
+              className="inline-flex items-center justify-center bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-full font-bold shadow-md transition-transform active:scale-95"
+            >
+              閉じる
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
